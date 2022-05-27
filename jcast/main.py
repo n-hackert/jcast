@@ -100,6 +100,11 @@ def runjcast(args):
     # If the m flag is not set, use the r argument value as min count
     else:
         min_count = args.read
+
+    # number of threads for concurrency
+    # cap it at cpu count
+    threads = min(args.num_threads, os.cpu_count())
+
     #
     # Main loop through every line of each of the five rMATS files to make junction object, then translate them
     #
@@ -123,36 +128,36 @@ def runjcast(args):
         #
         # Concurrent futures
         #
-        # import concurrent.futures
-        # with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count()-1) as pool:
-        #     for i, f in enumerate(tqdm.tqdm(pool.map(
-        #             translate_one_partial,
-        #             junctions,
-        #     ),
-        #             total=len(junctions),
-        #             desc='Processing {0} Junctions'.format(rma.jxn_type[0]),
-        #     )):
-        #         main_log.info('>>>>>> Doing {0} junction {1} for gene {2} {3}'.format(junctions[i].junction_type,
-        #                                                                               junctions[i].name,
-        #                                                                               junctions[i].gene_symbol,
-        #                                                                               junctions[i].gene_id,
-        #                                                                           ))
-        #         main_log.info(f)
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as pool:
+            for i, f in enumerate(tqdm.tqdm(pool.map(
+                    translate_one_partial,
+                    junctions,
+            ),
+                    total=len(junctions),
+                    desc='Processing {0} Junctions'.format(rma.jxn_type[0]),
+            )):
+                main_log.info('>>>>>> Doing {0} junction {1} for gene {2} {3}'.format(junctions[i].junction_type,
+                                                                                      junctions[i].name,
+                                                                                      junctions[i].gene_symbol,
+                                                                                      junctions[i].gene_id,
+                                                                                  ))
+                main_log.info(f)
 
         #
         # Single threaded for-loop
         #
-        for jx in tqdm.tqdm(junctions,
-                            total=len(junctions),
-                            desc='Processing {0} Junctions'.format(rma.jxn_type[0]),
-                            ):
-
-            main_log.info('>>>>>> Doing {0} junction {1} for gene {2} {3}'.format(jx.junction_type,
-                                                                                  jx.name,
-                                                                                  jx.gene_symbol,
-                                                                                  jx.gene_id,
-                                                                                  ))
-            main_log.info(translate_one_partial(jx))
+        # for jx in tqdm.tqdm(junctions,
+        #                     total=len(junctions),
+        #                     desc='Processing {0} Junctions'.format(rma.jxn_type[0]),
+        #                     ):
+        #
+        #     main_log.info('>>>>>> Doing {0} junction {1} for gene {2} {3}'.format(jx.junction_type,
+        #                                                                           jx.name,
+        #                                                                           jx.gene_symbol,
+        #                                                                           jx.gene_id,
+        #                                                                           ))
+        #     main_log.info(translate_one_partial(jx))
 
     return True
 
@@ -372,9 +377,9 @@ def main():
                         help='path to genome file',
                         )
 
-    # parser.add_argument('-n', '--num_threads', help='number of threads for concurrency [default: 6]',
-    #                     default=6,
-    #                     type=int)
+    parser.add_argument('-n', '--num_threads', help='number of threads for concurrency [default: 6]',
+                        default=6,
+                        type=int)
 
     parser.add_argument('-o', '--out',
                         help='name of the output files [default: psq_out]',
